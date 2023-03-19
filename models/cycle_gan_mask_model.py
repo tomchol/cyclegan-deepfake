@@ -106,9 +106,9 @@ class CycleGANMaskModel(BaseModel):
         """
         AtoB = self.opt.direction == 'AtoB'
         self.real_A = input['A' if AtoB else 'B'].to(self.device)
-        self.mask_A = input['A_mask' if AtoB else 'B_mask']
+        self.mask_A = input['A_mask' if AtoB else 'B_mask'].to(self.device)
         self.real_B = input['B' if AtoB else 'A'].to(self.device)
-        self.mask_B = input['B_mask' if AtoB else 'A_mask']
+        self.mask_B = input['B_mask' if AtoB else 'A_mask'].to(self.device)
         self.image_paths = input['A_paths' if AtoB else 'B_paths']
 
     def forward(self):
@@ -174,13 +174,13 @@ class CycleGANMaskModel(BaseModel):
         # Forward cycle loss || G_B(G_A(A)) - A|| with the mask
         # Compute the mask from image
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A)
-        self.loss_cycle_A = (self.loss_cycle_A * self.mask_A.float()).sum()
+        self.loss_cycle_A = (torch.mean(self.loss_cycle_A, dim=1) * self.mask_A.float()).sum()
         non_zero_elements = self.mask_A.sum()
         self.loss_cycle_A = self.loss_cycle_A / non_zero_elements * lambda_A
 
         # Backward cycle loss || G_A(G_B(B)) - B||
         self.loss_cycle_B = self.criterionCycle(self.rec_B, self.real_B)
-        self.loss_cycle_B = (self.loss_cycle_B * self.mask_B.float()).sum()
+        self.loss_cycle_B = (torch.mean(self.loss_cycle_B, dim=1) * self.mask_B.float()).sum()
         non_zero_elements = self.mask_B.sum()
         self.loss_cycle_B = self.loss_cycle_B / non_zero_elements * lambda_B
         # combined loss and calculate gradients

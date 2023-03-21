@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
-
+from torchvision import transforms as T
 
 ###############################################################################
 # Helper Functions
@@ -229,10 +229,11 @@ class GANLoss(nn.Module):
         self.register_buffer('real_label', torch.tensor(target_real_label))
         self.register_buffer('fake_label', torch.tensor(target_fake_label))
         self.gan_mode = gan_mode
+        self.mask_resize = T.Resize(size=(30, 30))
         if gan_mode == 'lsgan':
-            self.loss = nn.MSELoss()
+            self.loss = nn.MSELoss(reduction="none")
         elif gan_mode == 'vanilla':
-            self.loss = nn.BCEWithLogitsLoss()
+            self.loss = nn.BCEWithLogitsLoss(reduction="none")
         elif gan_mode in ['wgangp']:
             self.loss = None
         else:
@@ -255,7 +256,7 @@ class GANLoss(nn.Module):
             target_tensor = self.fake_label
         return target_tensor.expand_as(prediction)
 
-    def __call__(self, prediction, target_is_real):
+    def __call__(self, prediction, target_is_real, mask):
         """Calculate loss given Discriminator's output and grount truth labels.
 
         Parameters:
@@ -265,9 +266,13 @@ class GANLoss(nn.Module):
         Returns:
             the calculated loss.
         """
+        mask = self.mask_resize(mask)
         if self.gan_mode in ['lsgan', 'vanilla']:
             target_tensor = self.get_target_tensor(prediction, target_is_real)
             loss = self.loss(prediction, target_tensor)
+            loss = (torch.mean(loss, dim=1) * mask.float()).sum()
+            non_zero_elements = mask.sum()
+            loss = loss / non_zero_elements
         elif self.gan_mode == 'wgangp':
             if target_is_real:
                 loss = -prediction.mean()

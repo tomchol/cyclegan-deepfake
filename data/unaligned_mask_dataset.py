@@ -36,6 +36,9 @@ class UnalignedMaskDataset(BaseDataset):
         self.B_paths_mask = sorted(make_dataset(self.dir_B_mask, opt.max_dataset_size))    # load images from '/path/to/data/trainB_mask'
         self.A_size = len(self.A_paths)  # get the size of dataset A
         self.B_size = len(self.B_paths)  # get the size of dataset B
+        self.A_mask_size = len(self.A_paths_mask)  # get the size of dataset A
+        self.B_mask_size = len(self.B_paths_mask)  # get the size of dataset B
+        assert (self.A_size == self.A_mask_size) and (self.B_size == self.B_mask_size)
         btoA = self.opt.direction == 'BtoA'
         input_nc = self.opt.output_nc if btoA else self.opt.input_nc       # get the number of channels of input image
         output_nc = self.opt.input_nc if btoA else self.opt.output_nc      # get the number of channels of output image

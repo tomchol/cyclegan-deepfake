@@ -118,7 +118,7 @@ class CycleGANMaskModel(BaseModel):
         self.fake_A = self.netG_B(self.real_B)  # G_B(B)
         self.rec_B = self.netG_A(self.fake_A)   # G_A(G_B(B))
 
-    def backward_D_basic(self, netD, real, fake):
+    def backward_D_basic(self, netD, real, fake, mask_real, mask_fake):
         """Calculate GAN loss for the discriminator
 
         Parameters:
@@ -131,10 +131,10 @@ class CycleGANMaskModel(BaseModel):
         """
         # Real
         pred_real = netD(real)
-        loss_D_real = self.criterionGAN(pred_real, True)
+        loss_D_real = self.criterionGAN(pred_real, True, mask_real)
         # Fake
         pred_fake = netD(fake.detach())
-        loss_D_fake = self.criterionGAN(pred_fake, False)
+        loss_D_fake = self.criterionGAN(pred_fake, False, mask_fake)
         # Combined loss and calculate gradients
         loss_D = (loss_D_real + loss_D_fake) * 0.5
         loss_D.backward()
@@ -143,12 +143,12 @@ class CycleGANMaskModel(BaseModel):
     def backward_D_A(self):
         """Calculate GAN loss for discriminator D_A"""
         fake_B = self.fake_B_pool.query(self.fake_B)
-        self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, fake_B)
+        self.loss_D_A = self.backward_D_basic(self.netD_A, self.real_B, fake_B, self.mask_B, self.mask_A)
 
     def backward_D_B(self):
         """Calculate GAN loss for discriminator D_B"""
         fake_A = self.fake_A_pool.query(self.fake_A)
-        self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, fake_A)
+        self.loss_D_B = self.backward_D_basic(self.netD_B, self.real_A, fake_A, self.mask_A, self.mask_B)
 
     def backward_G(self):
         """Calculate the loss for generators G_A and G_B"""
@@ -177,9 +177,9 @@ class CycleGANMaskModel(BaseModel):
             self.loss_idt_B = 0
 
         # GAN loss D_A(G_A(A))
-        self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True)
+        self.loss_G_A = self.criterionGAN(self.netD_A(self.fake_B), True, self.mask_A)
         # GAN loss D_B(G_B(B))
-        self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True)
+        self.loss_G_B = self.criterionGAN(self.netD_B(self.fake_A), True, self.mask_B)
         # Forward cycle loss || G_B(G_A(A)) - A|| with the mask
         # Compute the mask from image
         self.loss_cycle_A = self.criterionCycle(self.rec_A, self.real_A)

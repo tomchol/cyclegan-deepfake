@@ -89,7 +89,7 @@ class CycleGANMaskModel(BaseModel):
             # define loss functions
             self.criterionGAN = networks.GANLoss(opt.gan_mode).to(self.device)  # define GAN loss.
             self.criterionCycle = torch.nn.L1Loss(reduction='none')
-            self.criterionIdt = torch.nn.L1Loss()
+            self.criterionIdt = torch.nn.L1Loss(reduction='none')
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(itertools.chain(self.netG_A.parameters(), self.netG_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizer_D = torch.optim.Adam(itertools.chain(self.netD_A.parameters(), self.netD_B.parameters()), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -159,10 +159,19 @@ class CycleGANMaskModel(BaseModel):
         if lambda_idt > 0:
             # G_A should be identity if real_B is fed: ||G_A(B) - B||
             self.idt_A = self.netG_A(self.real_B)
-            self.loss_idt_A = self.criterionIdt(self.idt_A, self.real_B) * lambda_B * lambda_idt
+
+            self.loss_idt_A = self.criterionIdt(self.idt_A, self.real_B)
+            self.loss_idt_A = (torch.mean(self.loss_idt_A, dim=1) * self.mask_B.float()).sum()
+            non_zero_elements = self.mask_B.sum()
+            self.loss_idt_A = self.loss_idt_A / non_zero_elements * lambda_B * lambda_idt
+
             # G_B should be identity if real_A is fed: ||G_B(A) - A||
             self.idt_B = self.netG_B(self.real_A)
-            self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A) * lambda_A * lambda_idt
+
+            self.loss_idt_B = self.criterionIdt(self.idt_B, self.real_A)
+            self.loss_idt_B = (torch.mean(self.loss_idt_B, dim=1) * self.mask_A.float()).sum()
+            non_zero_elements = self.mask_A.sum()
+            self.loss_idt_B = self.loss_idt_B / non_zero_elements * lambda_B * lambda_idt
         else:
             self.loss_idt_A = 0
             self.loss_idt_B = 0

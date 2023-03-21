@@ -40,10 +40,10 @@ class UnalignedMaskDataset(BaseDataset):
         self.B_mask_size = len(self.B_paths_mask)  # get the size of dataset B
         for i in range(self.B_size):
             print(self.B_paths[i])
-            print(self.B_mask_size[i])
+            print(self.B_paths_mask[i])
         for i in range(self.A_size):
             print(self.A_paths[i])
-            print(self.A_mask_size[i])
+            print(self.A_paths_mask[i])
         print(self.A_size, self.B_size, self.A_mask_size, self.B_mask_size)
         assert (self.A_size == self.A_mask_size) and (self.B_size == self.B_mask_size)
         btoA = self.opt.direction == 'BtoA'

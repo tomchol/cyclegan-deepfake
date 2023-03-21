@@ -38,6 +38,7 @@ class UnalignedMaskDataset(BaseDataset):
         self.B_size = len(self.B_paths)  # get the size of dataset B
         self.A_mask_size = len(self.A_paths_mask)  # get the size of dataset A
         self.B_mask_size = len(self.B_paths_mask)  # get the size of dataset B
+        print(self.A_size, self.B_size, self.A_mask_size, self.B_mask_size)
         assert (self.A_size == self.A_mask_size) and (self.B_size == self.B_mask_size)
         btoA = self.opt.direction == 'BtoA'
         input_nc = self.opt.output_nc if btoA else self.opt.input_nc       # get the number of channels of input image
